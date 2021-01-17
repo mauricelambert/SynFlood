@@ -1,0 +1,10 @@
+LICENSE.txt
+MANIFEST.in
+README.md
+setup.py
+SynFlood.egg-info/PKG-INFO
+SynFlood.egg-info/SOURCES.txt
+SynFlood.egg-info/dependency_links.txt
+SynFlood.egg-info/entry_points.txt
+SynFlood.egg-info/requires.txt
+SynFlood.egg-info/top_level.txt

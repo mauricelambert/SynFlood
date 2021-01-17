@@ -1,0 +1,3 @@
+[console_scripts]
+SynFlood = SynFlood:launcher
+
