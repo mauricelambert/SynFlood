@@ -1,10 +1,8 @@
 LICENSE.txt
 MANIFEST.in
 README.md
-setup.cfg
+SynFlood.py
 setup.py
-SynFlood/SynFlood.py
-SynFlood/__init__.py
 SynFlood.egg-info/PKG-INFO
 SynFlood.egg-info/SOURCES.txt
 SynFlood.egg-info/dependency_links.txt
