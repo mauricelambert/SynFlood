@@ -20,7 +20,7 @@ This package require:
 pip install SynFlood 
 ```
 
-## Examples
+## Usages
 
 ### Command lines
 

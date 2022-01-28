@@ -50,7 +50,7 @@ KeyboardInterrupt
 [2016-06-22 12:35:25] CRITICAL (50) {__main__ - SynFlood.py:199} End of the SynFlood attack.
 """
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 __author__ = "Maurice Lambert"
 __author_email__ = "mauricelambert434@gmail.com"
 __maintainer__ = "Maurice Lambert"
@@ -210,6 +210,7 @@ def main() -> int:
                 arguments.source or RandIP(),
                 arguments.sport or RandShort(),
                 data.encode() if data else None,
+                iface=iface,
             )
         #except OSError:
         #    print("OSError...")
