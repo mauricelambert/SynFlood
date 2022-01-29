@@ -50,7 +50,7 @@ KeyboardInterrupt
 [2016-06-22 12:35:25] CRITICAL (50) {__main__ - SynFlood.py:199} End of the SynFlood attack.
 """
 
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 __author__ = "Maurice Lambert"
 __author_email__ = "mauricelambert434@gmail.com"
 __maintainer__ = "Maurice Lambert"
@@ -93,6 +93,7 @@ from platform import system
 from typing import List
 
 IS_LINUX: bool = system() == "Linux"
+conf_iface: NetworkInterface = conf.iface
 
 if IS_LINUX:
     from socket import socket, SOCK_RAW, AF_PACKET
@@ -164,7 +165,7 @@ class ScapyArguments(ArgumentParser):
                     namespace.iface = temp_iface
                     return namespace
 
-        namespace.iface = conf.iface
+        namespace.iface = conf_iface
         return namespace
 
 
