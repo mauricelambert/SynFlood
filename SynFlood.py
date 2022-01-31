@@ -50,7 +50,7 @@ KeyboardInterrupt
 [2016-06-22 12:35:25] CRITICAL (50) {__main__ - SynFlood.py:199} End of the SynFlood attack.
 """
 
-__version__ = "1.1.3"
+__version__ = "1.1.4"
 __author__ = "Maurice Lambert"
 __author_email__ = "mauricelambert434@gmail.com"
 __maintainer__ = "Maurice Lambert"
@@ -245,14 +245,14 @@ def synflood(
     if IS_LINUX:
         sock = socket(AF_PACKET, SOCK_RAW)
         try:
-            sock.bind((iface.ip, 0))
+            sock.bind((iface.name, 0))
         except OSError:
             logger_warning("Bind socket failed. Use scapy send function (slower)...")
             send_ = partial(sendp, iface=iface, verbose=0)
         else:
             packet = packet
             send_ = sock.send
-            
+
             logger_debug("Get packet as bytes...")
             packet = bytes(packet)
     else:

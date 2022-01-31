@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="SynFlood",
-    version="1.1.3",
+    version="1.1.4",
     py_modules=["SynFlood"],
     install_requires=["scapy"],
     author="Maurice Lambert",
